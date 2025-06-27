@@ -25,6 +25,7 @@ A comprehensive web-based CRM system specifically designed for field service tec
 ### 🐳 **Local Development (Recommended)**
 Get started in minutes with Docker:
 
+#### Linux/macOS
 ```bash
 # Clone the repository
 git clone <your-repo-url>
@@ -33,8 +34,21 @@ cd field-service-crm
 # Start the entire development environment
 ./scripts/dev-setup.sh
 
-# Or use Make commands
+# Or use Make commands (if available)
 make start
+```
+
+#### Windows (PowerShell)
+```powershell
+# Clone the repository
+git clone <your-repo-url>
+cd field-service-crm
+
+# Start the entire development environment
+.\scripts\dev-setup.ps1
+
+# Or use Docker Compose directly
+docker compose up -d
 ```
 
 This will start:

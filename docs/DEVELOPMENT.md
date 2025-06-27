@@ -8,8 +8,12 @@ This guide helps you set up and run the Field Service CRM system locally for dev
 - [Docker](https://docs.docker.com/get-docker/) (v20.10+)
 - [Docker Compose](https://docs.docker.com/compose/install/) (v2.0+)
 - [Git](https://git-scm.com/)
+- **Linux/macOS**: Bash shell
+- **Windows**: PowerShell 5.1+ or GNU Make (optional)
 
 ### One-Command Setup
+
+#### Linux/macOS (Bash)
 ```bash
 # Clone the repository
 git clone <your-repo-url>
@@ -17,6 +21,26 @@ cd field-service-crm
 
 # Start the entire development environment
 ./scripts/dev-setup.sh
+```
+
+#### Windows (PowerShell)
+```powershell
+# Clone the repository
+git clone <your-repo-url>
+cd field-service-crm
+
+# Start the entire development environment
+.\scripts\dev-setup.ps1
+```
+
+#### Cross-Platform (Docker Compose)
+```bash
+# Clone the repository
+git clone <your-repo-url>
+cd field-service-crm
+
+# Start services manually
+docker compose up -d
 ```
 
 This will:
@@ -107,7 +131,9 @@ make deploy-staging     # Deploy to staging environment
 make deploy-prod        # Deploy to production environment
 ```
 
-### Script Commands (Alternative)
+### Script Commands (Cross-Platform Alternative)
+
+#### Linux/macOS (Bash)
 ```bash
 # Start development environment
 ./scripts/dev-setup.sh start
@@ -126,6 +152,27 @@ make deploy-prod        # Deploy to production environment
 
 # Clean up all Docker resources
 ./scripts/dev-setup.sh clean
+```
+
+#### Windows (PowerShell)
+```powershell
+# Start development environment
+.\scripts\dev-setup.ps1 start
+
+# Stop all services
+.\scripts\dev-setup.ps1 stop
+
+# Restart services
+.\scripts\dev-setup.ps1 restart
+
+# View real-time logs
+.\scripts\dev-setup.ps1 logs
+
+# Rebuild images and restart
+.\scripts\dev-setup.ps1 rebuild
+
+# Clean up all Docker resources
+.\scripts\dev-setup.ps1 clean
 ```
 
 ### Docker Compose Commands
@@ -350,6 +397,28 @@ curl -X POST \
    # Restart Docker daemon
    sudo systemctl restart docker  # Linux
    # Restart Docker Desktop        # Mac/Windows
+   ```
+
+5. **Windows-Specific Issues**:
+   ```powershell
+   # Check port usage (Windows)
+   netstat -ano | findstr :3000
+   # Kill process by PID
+   taskkill /PID <PID> /F
+   
+   # PowerShell execution policy
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+   
+   # If Make is not available, use PowerShell script
+   .\scripts\dev-setup.ps1 start
+   ```
+
+6. **Cross-Platform Commands**:
+   ```bash
+   # Use Docker Compose directly (works everywhere)
+   docker compose up -d
+   docker compose logs -f
+   docker compose down
    ```
 
 ### Logs and Debugging

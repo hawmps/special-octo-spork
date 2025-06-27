@@ -141,10 +141,16 @@ make clean             # Clean up Docker resources
 # View service status
 make status            # Container status
 make health            # Health check all services
+make creds             # Show development login credentials
 ```
 
 ## 📚 **Documentation**
 
-- 🛠️ **[Development Guide](docs/DEVELOPMENT.md)** - Local setup and development workflow
+- 🛠️ **[Development Guide](docs/DEVELOPMENT.md)** - Local setup, development workflow, and authentication logging
 - 🚀 **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment instructions  
 - 📖 **[API Documentation](docs/API.md)** - Complete API reference
+
+### 🔑 **Quick Access**
+- **Development Login**: Run `make creds` to see test user credentials
+- **Authentication Logs**: See [Development Guide - Authentication Logs](docs/DEVELOPMENT.md#authentication-and-security-logs)
+- **Troubleshooting**: See [Development Guide - Troubleshooting](docs/DEVELOPMENT.md#troubleshooting)

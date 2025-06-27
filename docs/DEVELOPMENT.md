@@ -288,6 +288,8 @@ curl -X POST \
    ```
 
 ### Logs and Debugging
+
+#### Basic Log Commands
 ```bash
 # View all logs
 docker-compose logs
@@ -301,6 +303,87 @@ docker-compose ps
 # Check container resource usage
 docker stats
 ```
+
+#### Authentication and Security Logs
+
+The backend provides detailed authentication logging for debugging login issues and security monitoring:
+
+##### Real-time Authentication Logs
+```bash
+# Follow all backend logs in real-time
+docker compose logs backend -f
+
+# Filter for authentication-related logs
+docker compose logs backend -f | grep -i "auth\|sign\|login\|token"
+
+# See recent auth logs only
+docker compose logs backend --tail 50 | grep -i auth
+```
+
+##### Makefile Shortcuts
+```bash
+# Show development login credentials
+make creds
+
+# Show recent backend logs
+make logs-backend
+
+# Show all service logs
+make logs
+```
+
+##### Authentication Log Types
+When users sign in, you'll see logs like:
+- `Development user signed in: { email: 'admin@test.com', role: 'platform_admin' }`
+- `User authenticated: { userId: 'admin-001', username: 'admin@test.com', groups: ['platform_admin'] }`
+- `Access denied: { userId: 'user-123', userGroups: ['field_technician'], requiredRoles: ['platform_admin'] }`
+
+##### Testing Authentication
+```bash
+# Test auth endpoint directly
+curl -X POST http://localhost:3001/api/auth-dev/signin \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@test.com","password":"admin123"}'
+
+# Check available development users
+curl http://localhost:3001/api/auth-dev/dev-users
+
+# Test authenticated endpoint
+curl -H "Authorization: Bearer <token>" \
+     http://localhost:3001/api/auth-dev/me
+```
+
+##### Development Authentication
+In development mode, the system uses mock authentication that bypasses AWS Cognito:
+
+**Available Test Users:**
+- `admin@test.com / admin123` - Platform Administrator (full access)
+- `manager@test.com / manager123` - Field Manager (manage work orders, agents)
+- `tech@test.com / tech123` - Field Technician (view assigned work orders)
+
+Display credentials anytime: `make creds`
+
+##### Log Levels and Configuration
+The backend uses Winston logger with these levels:
+- `error` - Authentication failures, system errors
+- `warn` - Access denied, suspicious activity  
+- `info` - Successful logins, HTTP requests
+- `debug` - Token verification, user role checks (development only)
+
+Set `LOG_LEVEL=debug` in `.env.local` for verbose authentication logging.
+
+##### Frontend Console Logs
+Open browser DevTools (F12) and check the Console tab for:
+- Authentication state changes
+- API request/response details
+- Token refresh attempts
+- Login/logout events
+
+##### Common Authentication Issues
+1. **404 errors on auth endpoints**: Check API baseURL configuration
+2. **Token expired**: Check token expiration time in logs
+3. **Insufficient permissions**: Check user groups vs required roles in logs
+4. **CORS issues**: Check CORS configuration in backend logs
 
 ### Performance Optimization
 

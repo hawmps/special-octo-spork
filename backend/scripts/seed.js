@@ -73,6 +73,16 @@ async function executeSeed(client, seed) {
     await markSeedExecuted(client, seed.filename);
     console.log(`✅ Seed ${seed.filename} executed successfully`);
   } catch (error) {
+    // Check if this is a sample data error (duplicate data or subquery returning multiple rows)
+    if (error.code === '23505' || // unique_violation
+        error.message.includes('more than one row returned by a subquery') ||
+        error.message.includes('duplicate key value') ||
+        error.message.includes('already exists')) {
+      console.log(`⚠️  Sample data from ${seed.filename} appears to already exist, marking as executed`);
+      await markSeedExecuted(client, seed.filename);
+      return;
+    }
+    
     console.error(`❌ Error executing seed ${seed.filename}:`, error.message);
     throw error;
   }

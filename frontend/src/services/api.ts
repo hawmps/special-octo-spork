@@ -102,7 +102,9 @@ class ApiService {
 
   // Authentication endpoints
   async signIn(credentials: { email: string; password: string }) {
-    const response = await this.api.post('/auth/signin', credentials);
+    // Use development auth endpoint in development mode
+    const endpoint = process.env.NODE_ENV === 'development' ? '/auth-dev/signin' : '/auth/signin';
+    const response = await this.api.post(endpoint, credentials);
     return response.data;
   }
 
@@ -124,7 +126,9 @@ class ApiService {
   }
 
   async getCurrentUser() {
-    const response = await this.api.get('/auth/me');
+    // Use development auth endpoint in development mode
+    const endpoint = process.env.NODE_ENV === 'development' ? '/auth-dev/me' : '/auth/me';
+    const response = await this.api.get(endpoint);
     return response.data;
   }
 
@@ -139,6 +143,15 @@ class ApiService {
       confirmationCode,
       newPassword,
     });
+    return response.data;
+  }
+
+  // Development-only method to get available test users
+  async getDevUsers() {
+    if (process.env.NODE_ENV !== 'development') {
+      throw new Error('Development users only available in development mode');
+    }
+    const response = await this.api.get('/auth-dev/dev-users');
     return response.data;
   }
 

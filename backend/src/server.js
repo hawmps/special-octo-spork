@@ -21,6 +21,12 @@ const opportunityRoutes = require('./routes/opportunities');
 const partRoutes = require('./routes/parts');
 const reportRoutes = require('./routes/reports');
 
+// Development-only routes
+if (process.env.NODE_ENV === 'development') {
+  const authDevRoutes = require('./routes/auth-dev');
+  var developmentAuthRoutes = authDevRoutes;
+}
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -66,6 +72,12 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
+
+// Development authentication routes (bypass Cognito)
+if (process.env.NODE_ENV === 'development' && developmentAuthRoutes) {
+  app.use('/api/auth-dev', developmentAuthRoutes);
+}
+
 app.use('/api/accounts', accountRoutes);
 app.use('/api/contacts', contactRoutes);
 app.use('/api/work-orders', workOrderRoutes);

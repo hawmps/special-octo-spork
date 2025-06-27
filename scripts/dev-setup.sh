@@ -147,6 +147,11 @@ show_status() {
     echo "  💾 MinIO Console:            http://localhost:9001"
     echo "  🔍 MinIO API:                http://localhost:9000"
     echo ""
+    echo -e "${BLUE}🔑 Development Login Credentials:${NC}"
+    echo "  👑 Platform Admin:     admin@test.com / admin123"
+    echo "  👨‍💼 Field Manager:       manager@test.com / manager123"
+    echo "  🔧 Field Technician:   tech@test.com / tech123"
+    echo ""
     echo -e "${BLUE}📊 Database Connection:${NC}"
     echo "  Host: localhost"
     echo "  Port: 5432"
@@ -168,6 +173,7 @@ show_status() {
     echo "  - Database data persists between restarts"
     echo "  - Use MailHog to test email functionality"
     echo "  - Use MinIO as local S3-compatible storage"
+    echo "  - Development auth bypasses AWS Cognito for easy testing"
 }
 
 # Main execution

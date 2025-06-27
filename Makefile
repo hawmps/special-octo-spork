@@ -154,6 +154,14 @@ health: ## Check health of all services
 	@echo -n "Database: "; $(DOCKER_COMPOSE) exec postgres pg_isready -U postgres -d fieldservicecrm >/dev/null 2>&1 && echo "$(GREEN)✓$(NC)" || echo "$(RED)✗$(NC)"
 	@echo -n "Redis:    "; $(DOCKER_COMPOSE) exec redis redis-cli ping >/dev/null 2>&1 && echo "$(GREEN)✓$(NC)" || echo "$(RED)✗$(NC)"
 
+creds: ## Show development login credentials
+	@echo "$(GREEN)🔑 Development Login Credentials:$(NC)"
+	@echo "  👑 Platform Admin:     admin@test.com / admin123"
+	@echo "  👨‍💼 Field Manager:       manager@test.com / manager123"
+	@echo "  🔧 Field Technician:   tech@test.com / tech123"
+	@echo ""
+	@echo "$(GREEN)📱 Application URL: http://localhost:3000$(NC)"
+
 dev-tools: ## Start additional development tools (nginx proxy)
 	@echo "$(YELLOW)Starting development tools...$(NC)"
 	@$(DOCKER_COMPOSE) --profile nginx up -d nginx

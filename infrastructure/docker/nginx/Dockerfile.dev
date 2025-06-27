@@ -1,0 +1,10 @@
+FROM nginx:alpine
+
+# Copy development nginx configuration
+COPY dev.conf /etc/nginx/conf.d/default.conf
+
+# Add health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:80/health || exit 1
+
+EXPOSE 80

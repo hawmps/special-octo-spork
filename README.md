@@ -22,6 +22,42 @@ A comprehensive web-based CRM system specifically designed for field service tec
 
 ## Quick Start
 
+### 🐳 **Local Development (Recommended)**
+Get started in minutes with Docker:
+
+```bash
+# Clone the repository
+git clone <your-repo-url>
+cd field-service-crm
+
+# Start the entire development environment
+./scripts/dev-setup.sh
+
+# Or use Make commands
+make start
+```
+
+This will start:
+- 🌐 **Frontend**: http://localhost:3000
+- 🔧 **Backend API**: http://localhost:3001  
+- 🗄️ **Database Admin**: http://localhost:8080
+- 📧 **Email Testing**: http://localhost:8025
+- 💾 **File Storage**: http://localhost:9001
+
+### ☁️ **Production Deployment**
+Deploy to AWS with Terraform:
+
+```bash
+# Deploy to development environment
+./scripts/deploy.sh dev
+
+# Deploy to production
+./scripts/deploy.sh prod
+```
+
+### 🛠️ **Manual Setup**
+For traditional development setup:
+
 1. **Infrastructure Setup**
    ```bash
    cd infrastructure/terraform/environments/dev
@@ -71,3 +107,44 @@ A comprehensive web-based CRM system specifically designed for field service tec
 - Field Technician
 - Customer Service
 - Customer Portal User (future)
+
+## 🚀 **Development Commands**
+
+```bash
+# Start development environment
+make start              # or ./scripts/dev-setup.sh
+
+# View application logs  
+make logs              # or docker-compose logs -f
+
+# Run tests
+make test              # Run all tests
+make test-backend      # Backend tests only
+make test-frontend     # Frontend tests only
+
+# Database operations
+make migrate           # Run database migrations
+make seed              # Load sample data  
+make backup-db         # Backup database
+make shell-db          # Open database shell
+
+# Code quality
+make lint              # Run linting
+make lint-fix          # Fix linting issues
+
+# Container management
+make stop              # Stop all services
+make restart           # Restart services
+make rebuild           # Rebuild and restart
+make clean             # Clean up Docker resources
+
+# View service status
+make status            # Container status
+make health            # Health check all services
+```
+
+## 📚 **Documentation**
+
+- 🛠️ **[Development Guide](docs/DEVELOPMENT.md)** - Local setup and development workflow
+- 🚀 **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment instructions  
+- 📖 **[API Documentation](docs/API.md)** - Complete API reference

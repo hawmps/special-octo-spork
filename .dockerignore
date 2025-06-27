@@ -1,0 +1,66 @@
+# .dockerignore for Field Service CRM
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+docs/
+*.md
+
+# Environment files (will be passed as env vars)
+.env
+.env.*
+!.env.example
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build artifacts  
+build/
+dist/
+coverage/
+
+# Logs
+logs/
+*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+coverage/
+.nyc_output/
+
+# Terraform
+infrastructure/
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Scripts and config files not needed in container
+scripts/
+Makefile
+docker-compose*.yml
+.dockerignore
+
+# Temporary files
+tmp/
+temp/

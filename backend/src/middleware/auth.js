@@ -1,11 +1,16 @@
 const { CognitoJwtVerifier } = require('aws-jwt-verify');
+const jwt = require('jsonwebtoken');
 const logger = require('../config/logger');
 
-const verifier = CognitoJwtVerifier.create({
-  userPoolId: process.env.COGNITO_USER_POOL_ID,
-  tokenUse: 'access',
-  clientId: process.env.COGNITO_CLIENT_ID,
-});
+// Initialize Cognito verifier only if Cognito is configured
+let verifier = null;
+if (process.env.COGNITO_USER_POOL_ID && process.env.COGNITO_CLIENT_ID) {
+  verifier = CognitoJwtVerifier.create({
+    userPoolId: process.env.COGNITO_USER_POOL_ID,
+    tokenUse: 'access',
+    clientId: process.env.COGNITO_CLIENT_ID,
+  });
+}
 
 const authenticate = async (req, res, next) => {
   try {
@@ -19,18 +24,37 @@ const authenticate = async (req, res, next) => {
     }
 
     const token = authHeader.substring(7);
+    let payload;
 
-    // Verify the JWT token with Cognito
-    const payload = await verifier.verify(token);
-    
-    // Extract user information from token
-    req.user = {
-      id: payload.sub,
-      username: payload.username,
-      email: payload.email,
-      groups: payload['cognito:groups'] || [],
-      tokenUse: payload.token_use
-    };
+    // In development mode without Cognito, use regular JWT verification
+    if (process.env.NODE_ENV === 'development' && !verifier) {
+      const jwtSecret = process.env.JWT_SECRET || 'dev_jwt_secret';
+      payload = jwt.verify(token, jwtSecret);
+      
+      // Extract user information from development token
+      req.user = {
+        id: payload.sub,
+        username: payload['cognito:username'] || payload.email,
+        email: payload.email,
+        groups: payload.groups || [],
+        role: payload.role,
+        tokenUse: 'access'
+      };
+    } else if (verifier) {
+      // Verify the JWT token with Cognito
+      payload = await verifier.verify(token);
+      
+      // Extract user information from Cognito token
+      req.user = {
+        id: payload.sub,
+        username: payload.username,
+        email: payload.email,
+        groups: payload['cognito:groups'] || [],
+        tokenUse: payload.token_use
+      };
+    } else {
+      throw new Error('No authentication method configured');
+    }
 
     logger.debug('User authenticated:', { 
       userId: req.user.id, 
@@ -42,7 +66,7 @@ const authenticate = async (req, res, next) => {
   } catch (error) {
     logger.error('Authentication error:', error);
     
-    if (error.name === 'JwtExpiredError') {
+    if (error.name === 'JwtExpiredError' || error.name === 'TokenExpiredError') {
       return res.status(401).json({
         success: false,
         error: 'Token expired'

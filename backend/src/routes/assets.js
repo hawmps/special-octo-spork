@@ -1,13 +1,43 @@
 const express = require('express');
 const { authenticate, requireCustomerService } = require('../middleware/auth');
-const { validateAsset, validateUUID } = require('../middleware/validation');
-const db = require('../config/database');
+const { validateAsset, validateUUID, validatePagination, validateSearch } = require('../middleware/validation');
+const Asset = require('../models/Asset');
 const logger = require('../config/logger');
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(authenticate);
+
+// Get all assets
+router.get('/', 
+  validatePagination,
+  validateSearch,
+  async (req, res, next) => {
+    try {
+      const options = {
+        page: parseInt(req.query.page) || 1,
+        limit: parseInt(req.query.limit) || 20,
+        search: req.query.search,
+        status: req.query.status,
+        account_id: req.query.account_id,
+        asset_type: req.query.asset_type
+      };
+
+      const result = await Asset.findAll(options);
+
+      res.json({
+        success: true,
+        data: result.data,
+        pagination: result.pagination
+      });
+
+    } catch (error) {
+      logger.error('Error fetching assets:', error);
+      next(error);
+    }
+  }
+);
 
 // Get all assets for an account
 router.get('/account/:accountId', 
@@ -64,56 +94,18 @@ router.get('/:id',
   validateUUID('id'),
   async (req, res, next) => {
     try {
-      const query = `
-        SELECT 
-          a.*,
-          acc.company_name,
-          addr.street_address,
-          addr.city,
-          addr.state,
-          addr.zip_code
-        FROM assets a
-        LEFT JOIN accounts acc ON a.account_id = acc.account_id
-        LEFT JOIN addresses addr ON a.address_id = addr.address_id
-        WHERE a.asset_id = $1
-      `;
-      
-      const result = await db.query(query, [req.params.id]);
+      const asset = await Asset.findById(req.params.id);
 
-      if (result.rows.length === 0) {
+      if (!asset) {
         return res.status(404).json({
           success: false,
           error: 'Asset not found'
         });
       }
 
-      // Get service history
-      const historyQuery = `
-        SELECT 
-          wo.work_order_id,
-          wo.title,
-          wo.status,
-          wo.completion_date,
-          wol.service_type,
-          wol.description,
-          CONCAT(c.first_name, ' ', c.last_name) as technician_name
-        FROM work_order_lines wol
-        JOIN work_orders wo ON wol.work_order_id = wo.work_order_id
-        LEFT JOIN service_agents sa ON wo.assigned_agent_id = sa.agent_id
-        LEFT JOIN contacts c ON sa.contact_id = c.contact_id
-        WHERE wol.asset_id = $1
-        ORDER BY wo.completion_date DESC
-        LIMIT 10
-      `;
-
-      const historyResult = await db.query(historyQuery, [req.params.id]);
-
       res.json({
         success: true,
-        data: {
-          ...result.rows[0],
-          service_history: historyResult.rows
-        }
+        data: asset
       });
 
     } catch (error) {
@@ -129,41 +121,12 @@ router.post('/',
   validateAsset,
   async (req, res, next) => {
     try {
-      const {
-        account_id,
-        address_id,
-        asset_type,
-        brand,
-        model,
-        serial_number,
-        installation_date,
-        warranty_expiry,
-        location_description,
-        status = 'active',
-        notes
-      } = req.body;
-
-      const query = `
-        INSERT INTO assets (
-          account_id, address_id, asset_type, brand, model, serial_number,
-          installation_date, warranty_expiry, location_description, status, notes, created_by, updated_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $12)
-        RETURNING *
-      `;
-
-      const params = [
-        account_id, address_id, asset_type, brand, model, serial_number,
-        installation_date, warranty_expiry, location_description, status, notes, req.user.id
-      ];
-
-      const result = await db.query(query, params);
-
-      logger.info('Asset created:', { assetId: result.rows[0].asset_id, userId: req.user.id });
+      const asset = await Asset.create(req.body, req.user.id);
 
       res.status(201).json({
         success: true,
         message: 'Asset created successfully',
-        data: result.rows[0]
+        data: asset
       });
 
     } catch (error) {
@@ -177,58 +140,22 @@ router.post('/',
 router.put('/:id',
   requireCustomerService,
   validateUUID('id'),
+  validateAsset,
   async (req, res, next) => {
     try {
-      const allowedFields = [
-        'asset_type', 'brand', 'model', 'serial_number', 'installation_date',
-        'warranty_expiry', 'location_description', 'status', 'notes'
-      ];
-      
-      const updates = [];
-      const params = [req.params.id];
-      let paramCount = 1;
+      const asset = await Asset.update(req.params.id, req.body, req.user.id);
 
-      Object.keys(req.body).forEach(key => {
-        if (allowedFields.includes(key) && req.body[key] !== undefined) {
-          paramCount++;
-          updates.push(`${key} = $${paramCount}`);
-          params.push(req.body[key]);
-        }
-      });
-
-      if (updates.length === 0) {
-        return res.status(400).json({
-          success: false,
-          error: 'No valid fields to update'
-        });
-      }
-
-      paramCount++;
-      updates.push(`updated_by = $${paramCount}`);
-      params.push(req.user.id);
-
-      const query = `
-        UPDATE assets 
-        SET ${updates.join(', ')}
-        WHERE asset_id = $1
-        RETURNING *
-      `;
-
-      const result = await db.query(query, params);
-
-      if (result.rows.length === 0) {
+      if (!asset) {
         return res.status(404).json({
           success: false,
           error: 'Asset not found'
         });
       }
 
-      logger.info('Asset updated:', { assetId: req.params.id, userId: req.user.id });
-
       res.json({
         success: true,
         message: 'Asset updated successfully',
-        data: result.rows[0]
+        data: asset
       });
 
     } catch (error) {
@@ -244,17 +171,14 @@ router.delete('/:id',
   validateUUID('id'),
   async (req, res, next) => {
     try {
-      const query = 'DELETE FROM assets WHERE asset_id = $1 RETURNING *';
-      const result = await db.query(query, [req.params.id]);
+      const asset = await Asset.delete(req.params.id, req.user.id);
 
-      if (result.rows.length === 0) {
+      if (!asset) {
         return res.status(404).json({
           success: false,
           error: 'Asset not found'
         });
       }
-
-      logger.info('Asset deleted:', { assetId: req.params.id, userId: req.user.id });
 
       res.json({
         success: true,
@@ -267,5 +191,21 @@ router.delete('/:id',
     }
   }
 );
+
+// Get asset statistics
+router.get('/stats/overview', async (req, res, next) => {
+  try {
+    const stats = await Asset.getStats();
+
+    res.json({
+      success: true,
+      data: stats
+    });
+
+  } catch (error) {
+    logger.error('Error fetching asset stats:', error);
+    next(error);
+  }
+});
 
 module.exports = router;

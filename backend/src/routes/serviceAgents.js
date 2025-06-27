@@ -1,7 +1,7 @@
 const express = require('express');
 const { authenticate, requireFieldManager } = require('../middleware/auth');
-const { validateServiceAgent, validateUUID } = require('../middleware/validation');
-const db = require('../config/database');
+const { validateServiceAgent, validateUUID, validatePagination, validateSearch } = require('../middleware/validation');
+const ServiceAgent = require('../models/ServiceAgent');
 const logger = require('../config/logger');
 
 const router = express.Router();
@@ -10,80 +10,44 @@ const router = express.Router();
 router.use(authenticate);
 
 // Get all service agents
-router.get('/', async (req, res, next) => {
-  try {
-    const { status, territory, specialization } = req.query;
-    
-    let whereClause = '1=1';
-    const params = [];
-    let paramCount = 0;
+router.get('/', 
+  validatePagination,
+  validateSearch,
+  async (req, res, next) => {
+    try {
+      const options = {
+        page: parseInt(req.query.page) || 1,
+        limit: parseInt(req.query.limit) || 20,
+        search: req.query.search,
+        status: req.query.status,
+        territory: req.query.territory,
+        specialization: req.query.specialization,
+        certification_level: req.query.certification_level
+      };
 
-    if (status) {
-      paramCount++;
-      whereClause += ` AND sa.status = $${paramCount}`;
-      params.push(status);
+      const result = await ServiceAgent.findAll(options);
+
+      res.json({
+        success: true,
+        data: result.data,
+        pagination: result.pagination
+      });
+
+    } catch (error) {
+      logger.error('Error fetching service agents:', error);
+      next(error);
     }
-
-    if (territory) {
-      paramCount++;
-      whereClause += ` AND sa.territory ILIKE $${paramCount}`;
-      params.push(`%${territory}%`);
-    }
-
-    if (specialization) {
-      paramCount++;
-      whereClause += ` AND $${paramCount} = ANY(sa.specializations)`;
-      params.push(specialization);
-    }
-
-    const query = `
-      SELECT 
-        sa.*,
-        CONCAT(c.first_name, ' ', c.last_name) as full_name,
-        c.email,
-        c.phone,
-        (SELECT COUNT(*) FROM work_orders wo WHERE wo.assigned_agent_id = sa.agent_id AND wo.status IN ('assigned', 'in_progress')) as active_work_orders
-      FROM service_agents sa
-      LEFT JOIN contacts c ON sa.contact_id = c.contact_id
-      WHERE ${whereClause}
-      ORDER BY c.first_name, c.last_name
-    `;
-
-    const result = await db.query(query, params);
-
-    res.json({
-      success: true,
-      data: result.rows
-    });
-
-  } catch (error) {
-    logger.error('Error fetching service agents:', error);
-    next(error);
   }
-});
+);
 
 // Get service agent by ID
 router.get('/:id', 
   validateUUID('id'),
   async (req, res, next) => {
     try {
-      const query = `
-        SELECT 
-          sa.*,
-          CONCAT(c.first_name, ' ', c.last_name) as full_name,
-          c.email,
-          c.phone,
-          c.mobile_phone,
-          a.company_name
-        FROM service_agents sa
-        LEFT JOIN contacts c ON sa.contact_id = c.contact_id
-        LEFT JOIN accounts a ON c.account_id = a.account_id
-        WHERE sa.agent_id = $1
-      `;
-      
-      const result = await db.query(query, [req.params.id]);
+      const agent = await ServiceAgent.findById(req.params.id);
 
-      if (result.rows.length === 0) {
+      if (!agent) {
         return res.status(404).json({
           success: false,
           error: 'Service agent not found'
@@ -92,7 +56,7 @@ router.get('/:id',
 
       res.json({
         success: true,
-        data: result.rows[0]
+        data: agent
       });
 
     } catch (error) {
@@ -108,38 +72,12 @@ router.post('/',
   validateServiceAgent,
   async (req, res, next) => {
     try {
-      const {
-        contact_id,
-        employee_id,
-        specializations,
-        certification_level = 'junior',
-        hire_date,
-        territory,
-        hourly_rate,
-        status = 'active'
-      } = req.body;
-
-      const query = `
-        INSERT INTO service_agents (
-          contact_id, employee_id, specializations, certification_level, 
-          hire_date, territory, hourly_rate, status, created_by, updated_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
-        RETURNING *
-      `;
-
-      const params = [
-        contact_id, employee_id, specializations, certification_level,
-        hire_date, territory, hourly_rate, status, req.user.id
-      ];
-
-      const result = await db.query(query, params);
-
-      logger.info('Service agent created:', { agentId: result.rows[0].agent_id, userId: req.user.id });
+      const agent = await ServiceAgent.create(req.body, req.user.id);
 
       res.status(201).json({
         success: true,
         message: 'Service agent created successfully',
-        data: result.rows[0]
+        data: agent
       });
 
     } catch (error) {
@@ -155,55 +93,19 @@ router.put('/:id',
   validateUUID('id'),
   async (req, res, next) => {
     try {
-      const allowedFields = [
-        'specializations', 'certification_level', 'territory', 'hourly_rate', 'status'
-      ];
-      
-      const updates = [];
-      const params = [req.params.id];
-      let paramCount = 1;
+      const agent = await ServiceAgent.update(req.params.id, req.body, req.user.id);
 
-      Object.keys(req.body).forEach(key => {
-        if (allowedFields.includes(key) && req.body[key] !== undefined) {
-          paramCount++;
-          updates.push(`${key} = $${paramCount}`);
-          params.push(req.body[key]);
-        }
-      });
-
-      if (updates.length === 0) {
-        return res.status(400).json({
-          success: false,
-          error: 'No valid fields to update'
-        });
-      }
-
-      paramCount++;
-      updates.push(`updated_by = $${paramCount}`);
-      params.push(req.user.id);
-
-      const query = `
-        UPDATE service_agents 
-        SET ${updates.join(', ')}
-        WHERE agent_id = $1
-        RETURNING *
-      `;
-
-      const result = await db.query(query, params);
-
-      if (result.rows.length === 0) {
+      if (!agent) {
         return res.status(404).json({
           success: false,
           error: 'Service agent not found'
         });
       }
 
-      logger.info('Service agent updated:', { agentId: req.params.id, userId: req.user.id });
-
       res.json({
         success: true,
         message: 'Service agent updated successfully',
-        data: result.rows[0]
+        data: agent
       });
 
     } catch (error) {
@@ -219,30 +121,11 @@ router.get('/:id/availability',
   async (req, res, next) => {
     try {
       const { date } = req.query;
-      const targetDate = date || new Date().toISOString().split('T')[0];
-
-      const query = `
-        SELECT 
-          wo.work_order_id,
-          wo.title,
-          wo.scheduled_date,
-          wo.estimated_duration,
-          wo.status
-        FROM work_orders wo
-        WHERE wo.assigned_agent_id = $1
-        AND DATE(wo.scheduled_date) = $2
-        AND wo.status IN ('assigned', 'in_progress')
-        ORDER BY wo.scheduled_date
-      `;
-
-      const result = await db.query(query, [req.params.id, targetDate]);
+      const availability = await ServiceAgent.getAvailability(req.params.id, date);
 
       res.json({
         success: true,
-        data: {
-          date: targetDate,
-          scheduled_work_orders: result.rows
-        }
+        data: availability
       });
 
     } catch (error) {
@@ -257,22 +140,11 @@ router.get('/:id/stats',
   validateUUID('id'),
   async (req, res, next) => {
     try {
-      const query = `
-        SELECT 
-          COUNT(*) as total_work_orders,
-          COUNT(*) FILTER (WHERE status = 'completed') as completed_work_orders,
-          COUNT(*) FILTER (WHERE status IN ('assigned', 'in_progress')) as active_work_orders,
-          COUNT(*) FILTER (WHERE created_date >= CURRENT_DATE - INTERVAL '30 days') as work_orders_this_month,
-          AVG(EXTRACT(EPOCH FROM (completion_date - created_date))/3600) FILTER (WHERE completion_date IS NOT NULL) as avg_completion_hours
-        FROM work_orders
-        WHERE assigned_agent_id = $1
-      `;
-
-      const result = await db.query(query, [req.params.id]);
+      const stats = await ServiceAgent.getStats(req.params.id);
 
       res.json({
         success: true,
-        data: result.rows[0]
+        data: stats
       });
 
     } catch (error) {
@@ -281,5 +153,80 @@ router.get('/:id/stats',
     }
   }
 );
+
+// Delete service agent
+router.delete('/:id',
+  requireFieldManager,
+  validateUUID('id'),
+  async (req, res, next) => {
+    try {
+      const agent = await ServiceAgent.delete(req.params.id, req.user.id);
+
+      if (!agent) {
+        return res.status(404).json({
+          success: false,
+          error: 'Service agent not found'
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'Service agent deleted successfully'
+      });
+
+    } catch (error) {
+      logger.error('Error deleting service agent:', error);
+      next(error);
+    }
+  }
+);
+
+// Get overall statistics
+router.get('/stats/overview', async (req, res, next) => {
+  try {
+    const stats = await ServiceAgent.getOverallStats();
+
+    res.json({
+      success: true,
+      data: stats
+    });
+
+  } catch (error) {
+    logger.error('Error fetching service agent stats:', error);
+    next(error);
+  }
+});
+
+// Get available specializations
+router.get('/specializations/list', async (req, res, next) => {
+  try {
+    const specializations = await ServiceAgent.getSpecializations();
+
+    res.json({
+      success: true,
+      data: specializations
+    });
+
+  } catch (error) {
+    logger.error('Error fetching specializations:', error);
+    next(error);
+  }
+});
+
+// Get available territories
+router.get('/territories/list', async (req, res, next) => {
+  try {
+    const territories = await ServiceAgent.getTerritories();
+
+    res.json({
+      success: true,
+      data: territories
+    });
+
+  } catch (error) {
+    logger.error('Error fetching territories:', error);
+    next(error);
+  }
+});
 
 module.exports = router;

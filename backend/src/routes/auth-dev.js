@@ -9,7 +9,7 @@ const router = express.Router();
 // Development users (for local testing only)
 const DEV_USERS = [
   {
-    id: 'admin-001',
+    id: '550e8400-e29b-41d4-a716-446655440001',
     email: 'admin@test.com',
     password: 'admin123',
     firstName: 'Admin',
@@ -18,7 +18,7 @@ const DEV_USERS = [
     groups: ['platform_admin']
   },
   {
-    id: 'manager-001', 
+    id: '550e8400-e29b-41d4-a716-446655440002', 
     email: 'manager@test.com',
     password: 'manager123',
     firstName: 'Field',
@@ -27,7 +27,7 @@ const DEV_USERS = [
     groups: ['field_manager']
   },
   {
-    id: 'tech-001',
+    id: '550e8400-e29b-41d4-a716-446655440003',
     email: 'tech@test.com', 
     password: 'tech123',
     firstName: 'Field',

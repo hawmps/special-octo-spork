@@ -187,6 +187,11 @@ class ApiService {
   }
 
   // Contacts
+  async getContacts(params?: any) {
+    const response = await this.api.get('/contacts', { params });
+    return response.data;
+  }
+
   async getContactsByAccount(accountId: string) {
     const response = await this.api.get(`/contacts/account/${accountId}`);
     return response.data;
@@ -286,7 +291,27 @@ class ApiService {
     return response.data;
   }
 
+  async deleteServiceAgent(id: string) {
+    const response = await this.api.delete(`/service-agents/${id}`);
+    return response.data;
+  }
+
+  async getServiceAgentSpecializations() {
+    const response = await this.api.get('/service-agents/specializations/list');
+    return response.data;
+  }
+
+  async getServiceAgentTerritories() {
+    const response = await this.api.get('/service-agents/territories/list');
+    return response.data;
+  }
+
   // Assets
+  async getAssets(params?: any) {
+    const response = await this.api.get('/assets', { params });
+    return response.data;
+  }
+
   async getAssetsByAccount(accountId: string, params?: any) {
     const response = await this.api.get(`/assets/account/${accountId}`, { params });
     return response.data;

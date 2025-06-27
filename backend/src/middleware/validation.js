@@ -69,7 +69,7 @@ const validateWorkOrder = [
 
 // Service Agent validation
 const validateServiceAgent = [
-  validateUUID('contact_id'),
+  body('contact_id').isUUID().withMessage('contact_id must be a valid UUID'),
   body('employee_id').trim().isLength({ min: 1, max: 50 }).withMessage('Employee ID is required and must be less than 50 characters'),
   body('specializations').isArray().withMessage('Specializations must be an array'),
   validateEnum('certification_level', ['junior', 'senior', 'master', 'supervisor']).optional(),
@@ -81,7 +81,7 @@ const validateServiceAgent = [
 
 // Asset validation
 const validateAsset = [
-  validateUUID('account_id'),
+  body('account_id').isUUID().withMessage('account_id must be a valid UUID'),
   body('asset_type').trim().isLength({ min: 1, max: 100 }).withMessage('Asset type is required and must be less than 100 characters'),
   body('brand').optional().trim().isLength({ max: 100 }).withMessage('Brand must be less than 100 characters'),
   body('model').optional().trim().isLength({ max: 100 }).withMessage('Model must be less than 100 characters'),

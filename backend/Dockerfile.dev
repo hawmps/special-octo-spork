@@ -20,7 +20,8 @@ RUN npm install -g nodemon
 COPY package*.json ./
 
 # Install all dependencies (including dev dependencies)
-RUN npm ci
+# Use npm install if package-lock.json doesn't exist, otherwise use npm ci
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # Create logs directory
 RUN mkdir -p logs

@@ -17,7 +17,8 @@ FROM base as development
 COPY package*.json ./
 
 # Install all dependencies (including dev dependencies)
-RUN npm ci
+# Use npm install if package-lock.json doesn't exist, otherwise use npm ci
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \

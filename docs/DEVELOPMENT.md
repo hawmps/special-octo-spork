@@ -42,7 +42,72 @@ The development environment includes these services:
 
 ## Development Commands
 
-### Basic Commands
+### Quick Reference
+- **Start Everything**: `make start` (shows login credentials at the end)
+- **Show Login Credentials**: `make creds`
+- **View Logs**: `make logs-backend` (for authentication logs)
+- **Stop Everything**: `make stop`
+- **Get Help**: `make help`
+
+### Make Commands (Recommended)
+```bash
+# Environment Management
+make start              # Start the development environment
+make stop               # Stop all services
+make restart            # Restart all services  
+make rebuild            # Rebuild images and restart services
+make clean              # Clean up Docker resources
+
+# Viewing Logs and Status
+make logs               # Show logs from all services
+make logs-backend       # Show backend logs
+make logs-frontend      # Show frontend logs
+make logs-db            # Show database logs
+make status             # Show service status
+make health             # Check health of all services
+
+# Development Access
+make shell-backend      # Open shell in backend container
+make shell-frontend     # Open shell in frontend container
+make shell-db           # Open PostgreSQL shell
+make creds              # Show development login credentials
+make open               # Open application URLs in browser (macOS)
+
+# Testing and Code Quality
+make test               # Run all tests
+make test-backend       # Run backend tests only
+make test-frontend      # Run frontend tests only
+make lint               # Run linting on all code
+make lint-fix           # Fix linting issues
+
+# Database Operations
+make migrate            # Run database migrations
+make seed               # Load sample data
+make reset-db           # Reset database (drop and recreate)
+make backup-db          # Backup database to file
+make restore-db         # Restore database from latest backup
+
+# Development Tools
+make install            # Install dependencies in containers
+make dev-tools          # Start additional development tools (nginx proxy)
+make monitor            # Show real-time container resource usage
+make update             # Update all dependencies
+make security-scan      # Run security audit
+
+# Environment Setup
+make setup-env          # Setup environment file
+make docs               # Generate and view documentation
+
+# Production Testing
+make production         # Build and test production images locally
+
+# Deployment (if configured)
+make deploy-dev         # Deploy to development environment
+make deploy-staging     # Deploy to staging environment  
+make deploy-prod        # Deploy to production environment
+```
+
+### Script Commands (Alternative)
 ```bash
 # Start development environment
 ./scripts/dev-setup.sh start

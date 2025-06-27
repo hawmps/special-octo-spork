@@ -71,6 +71,13 @@ async function executeMigration(client, migration) {
     await markMigrationExecuted(client, migration.filename);
     console.log(`✅ Migration ${migration.filename} executed successfully`);
   } catch (error) {
+    // Check if this is a "relation already exists" error
+    if (error.code === '42P07' && error.message.includes('already exists')) {
+      console.log(`⚠️  Tables from ${migration.filename} already exist, marking as executed`);
+      await markMigrationExecuted(client, migration.filename);
+      return;
+    }
+    
     console.error(`❌ Error executing migration ${migration.filename}:`, error.message);
     throw error;
   }

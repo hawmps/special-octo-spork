@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -20,6 +20,11 @@ import {
   Pagination,
   CircularProgress,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Autocomplete,
 } from '@mui/material';
 import {
   Add,
@@ -35,10 +40,32 @@ import {
 import { useQuery } from 'react-query';
 import { format } from 'date-fns';
 import { Helmet } from 'react-helmet-async';
+import { Formik, Form, Field } from 'formik';
+import * as Yup from 'yup';
 
 import { apiService } from '@/services/api';
-import { WorkOrder, PaginatedResponse } from '@/types';
+import { WorkOrder, PaginatedResponse, Account, ServiceAgent, CreateWorkOrderData } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
+
+// Validation schema for work order creation
+const workOrderValidationSchema = Yup.object({
+  account_id: Yup.string()
+    .required('Account is required'),
+  title: Yup.string()
+    .required('Title is required')
+    .max(255, 'Title must not exceed 255 characters'),
+  description: Yup.string()
+    .max(2000, 'Description must not exceed 2000 characters'),
+  priority: Yup.string()
+    .oneOf(['low', 'medium', 'high', 'emergency'], 'Invalid priority')
+    .required('Priority is required'),
+  service_type: Yup.string()
+    .max(100, 'Service type must not exceed 100 characters'),
+  scheduled_date: Yup.date()
+    .min(new Date(), 'Scheduled date cannot be in the past'),
+  estimated_duration: Yup.number()
+    .min(1, 'Estimated duration must be at least 1 minute'),
+});
 
 const WorkOrdersPage: React.FC = () => {
   const navigate = useNavigate();
@@ -49,6 +76,13 @@ const WorkOrdersPage: React.FC = () => {
     status: '',
     priority: '',
   });
+  
+  // Dialog state
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [serviceAgents, setServiceAgents] = useState<ServiceAgent[]>([]);
 
   const {
     data: workOrdersData,
@@ -71,6 +105,46 @@ const WorkOrdersPage: React.FC = () => {
   const handleFilterChange = (field: string, value: string) => {
     setFilters(prev => ({ ...prev, [field]: value }));
     setPage(1); // Reset to first page when filtering
+  };
+
+  // Fetch accounts and service agents for the create dialog
+  const fetchDropdownData = useCallback(async () => {
+    try {
+      const [accountsResponse, agentsResponse] = await Promise.all([
+        apiService.getAccounts({ limit: 100 }),
+        apiService.getServiceAgents({ limit: 100 }),
+      ]);
+      setAccounts(accountsResponse.data);
+      setServiceAgents(agentsResponse.data);
+    } catch (err: any) {
+      console.error('Error fetching dropdown data:', err);
+      setCreateError('Failed to load accounts and service agents');
+    }
+  }, []);
+
+  // Handle work order creation
+  const handleCreateWorkOrder = async (values: CreateWorkOrderData) => {
+    try {
+      setCreating(true);
+      setCreateError(null);
+      
+      await apiService.createWorkOrder(values);
+      
+      // Close dialog and refresh data
+      setAddDialogOpen(false);
+      refetch();
+    } catch (err: any) {
+      console.error('Error creating work order:', err);
+      setCreateError(err.response?.data?.error || 'Failed to create work order');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // Handle dialog open
+  const handleDialogOpen = () => {
+    setAddDialogOpen(true);
+    fetchDropdownData();
   };
 
   const getPriorityColor = (priority: string) => {
@@ -147,7 +221,7 @@ const WorkOrdersPage: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<Add />}
-            onClick={() => navigate('/work-orders/new')}
+            onClick={handleDialogOpen}
           >
             Create Work Order
           </Button>
@@ -331,7 +405,7 @@ const WorkOrdersPage: React.FC = () => {
                 <Button
                   variant="contained"
                   startIcon={<Add />}
-                  onClick={() => navigate('/work-orders/new')}
+                  onClick={handleDialogOpen}
                 >
                   Create Work Order
                 </Button>
@@ -340,6 +414,206 @@ const WorkOrdersPage: React.FC = () => {
           )}
         </>
       )}
+
+      {/* Create Work Order Dialog */}
+      <Dialog
+        open={addDialogOpen}
+        onClose={() => !creating && setAddDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <Formik
+          initialValues={{
+            account_id: '',
+            assigned_agent_id: '',
+            title: '',
+            description: '',
+            priority: 'medium' as const,
+            service_type: '',
+            scheduled_date: '',
+            estimated_duration: '',
+            notes: '',
+          }}
+          validationSchema={workOrderValidationSchema}
+          onSubmit={handleCreateWorkOrder}
+        >
+          {({ errors, touched, isValid, dirty, setFieldValue, values }) => (
+            <Form>
+              <DialogTitle>Create New Work Order</DialogTitle>
+              <DialogContent>
+                {createError && (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {createError}
+                  </Alert>
+                )}
+                
+                <Grid container spacing={2} sx={{ mt: 1 }}>
+                  <Grid item xs={12} sm={6}>
+                    <Autocomplete
+                      options={accounts}
+                      getOptionLabel={(option) => option.company_name}
+                      value={accounts.find(account => account.account_id === values.account_id) || null}
+                      onChange={(_, newValue) => {
+                        setFieldValue('account_id', newValue?.account_id || '');
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Account *"
+                          error={touched.account_id && Boolean(errors.account_id)}
+                          helperText={touched.account_id && errors.account_id}
+                        />
+                      )}
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Autocomplete
+                      options={serviceAgents}
+                      getOptionLabel={(option) => `${option.full_name || 'Unknown'} (${option.employee_id})`}
+                      value={serviceAgents.find(agent => agent.agent_id === values.assigned_agent_id) || null}
+                      onChange={(_, newValue) => {
+                        setFieldValue('assigned_agent_id', newValue?.agent_id || '');
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Assigned Agent"
+                          helperText="Leave empty to assign later"
+                        />
+                      )}
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12}>
+                    <Field name="title">
+                      {({ field }: any) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          label="Title *"
+                          error={touched.title && Boolean(errors.title)}
+                          helperText={touched.title && errors.title}
+                        />
+                      )}
+                    </Field>
+                  </Grid>
+                  
+                  <Grid item xs={12}>
+                    <Field name="description">
+                      {({ field }: any) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          label="Description"
+                          multiline
+                          rows={3}
+                          error={touched.description && Boolean(errors.description)}
+                          helperText={touched.description && errors.description}
+                        />
+                      )}
+                    </Field>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Field name="priority">
+                      {({ field }: any) => (
+                        <FormControl fullWidth>
+                          <InputLabel>Priority *</InputLabel>
+                          <Select {...field} label="Priority *">
+                            <MenuItem value="low">Low</MenuItem>
+                            <MenuItem value="medium">Medium</MenuItem>
+                            <MenuItem value="high">High</MenuItem>
+                            <MenuItem value="emergency">Emergency</MenuItem>
+                          </Select>
+                        </FormControl>
+                      )}
+                    </Field>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Field name="service_type">
+                      {({ field }: any) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          label="Service Type"
+                          placeholder="e.g., Maintenance, Repair, Installation"
+                          error={touched.service_type && Boolean(errors.service_type)}
+                          helperText={touched.service_type && errors.service_type}
+                        />
+                      )}
+                    </Field>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Field name="scheduled_date">
+                      {({ field }: any) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          label="Scheduled Date"
+                          type="datetime-local"
+                          InputLabelProps={{ shrink: true }}
+                          error={touched.scheduled_date && Boolean(errors.scheduled_date)}
+                          helperText={touched.scheduled_date && errors.scheduled_date}
+                        />
+                      )}
+                    </Field>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Field name="estimated_duration">
+                      {({ field }: any) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          label="Estimated Duration (minutes)"
+                          type="number"
+                          error={touched.estimated_duration && Boolean(errors.estimated_duration)}
+                          helperText={touched.estimated_duration && errors.estimated_duration}
+                        />
+                      )}
+                    </Field>
+                  </Grid>
+                  
+                  <Grid item xs={12}>
+                    <Field name="notes">
+                      {({ field }: any) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          label="Notes"
+                          multiline
+                          rows={2}
+                          placeholder="Additional notes or special instructions"
+                        />
+                      )}
+                    </Field>
+                  </Grid>
+                </Grid>
+              </DialogContent>
+              
+              <DialogActions>
+                <Button
+                  onClick={() => setAddDialogOpen(false)}
+                  disabled={creating}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={creating || !isValid || !dirty}
+                  startIcon={creating ? <CircularProgress size={16} /> : <Add />}
+                >
+                  {creating ? 'Creating...' : 'Create Work Order'}
+                </Button>
+              </DialogActions>
+            </Form>
+          )}
+        </Formik>
+      </Dialog>
     </>
   );
 };

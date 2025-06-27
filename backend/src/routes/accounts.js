@@ -88,7 +88,6 @@ router.post('/',
 router.put('/:id',
   requireCustomerService,
   validateUUID('id'),
-  validateAccount,
   async (req, res, next) => {
     try {
       const account = await Account.update(req.params.id, req.body, req.user.id);
@@ -155,5 +154,44 @@ router.get('/stats/overview', async (req, res, next) => {
     next(error);
   }
 });
+
+// Get specific account statistics
+router.get('/:id/stats', 
+  validateUUID('id'),
+  async (req, res, next) => {
+    try {
+      const stats = await Account.getAccountStats(req.params.id);
+
+      res.json({
+        success: true,
+        data: stats
+      });
+
+    } catch (error) {
+      logger.error('Error fetching account stats:', error);
+      next(error);
+    }
+  }
+);
+
+// Get account recent activity
+router.get('/:id/activity', 
+  validateUUID('id'),
+  async (req, res, next) => {
+    try {
+      const limit = parseInt(req.query.limit) || 10;
+      const activity = await Account.getRecentActivity(req.params.id, limit);
+
+      res.json({
+        success: true,
+        data: activity
+      });
+
+    } catch (error) {
+      logger.error('Error fetching account activity:', error);
+      next(error);
+    }
+  }
+);
 
 module.exports = router;

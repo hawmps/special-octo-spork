@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   AppBar,
@@ -18,6 +18,7 @@ import {
   Divider,
   useTheme,
   useMediaQuery,
+  Badge,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -31,8 +32,11 @@ import {
   AccountCircle,
   Logout,
   Settings,
+  Schedule,
+  Notifications,
 } from '@mui/icons-material';
 import { useAuth } from '@/hooks/useAuth';
+import { apiService } from '@/services/api';
 
 const drawerWidth = 240;
 
@@ -51,6 +55,12 @@ const navigationItems: NavigationItem[] = [
     text: 'Service Agents', 
     path: '/service-agents', 
     icon: <People />,
+    roles: ['platform_admin', 'field_manager']
+  },
+  { 
+    text: 'Scheduling', 
+    path: '/scheduling', 
+    icon: <Schedule />,
     roles: ['platform_admin', 'field_manager']
   },
   { text: 'Assets', path: '/assets', icon: <Build /> },
@@ -78,6 +88,7 @@ const Layout: React.FC = () => {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -106,6 +117,31 @@ const Layout: React.FC = () => {
     const userGroups = authState.user?.groups || [];
     return roles.some(role => userGroups.includes(role));
   };
+
+  // Fetch unread notifications count for agents
+  useEffect(() => {
+    const fetchNotificationsCount = async () => {
+      if (authState.isAuthenticated && authState.user?.id) {
+        try {
+          const response = await apiService.getAgentNotifications(authState.user.id, { 
+            limit: 1, 
+            unread_only: true 
+          });
+          setUnreadNotifications(response.data.length);
+        } catch (error) {
+          // Silently fail - notifications are not critical for app functionality
+          console.log('Could not fetch notifications:', error);
+        }
+      }
+    };
+
+    fetchNotificationsCount();
+    
+    // Refresh notifications count every 5 minutes
+    const interval = setInterval(fetchNotificationsCount, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, [authState.isAuthenticated, authState.user?.id]);
 
   const drawer = (
     <Box>
@@ -164,6 +200,19 @@ const Layout: React.FC = () => {
             <Typography variant="body2" sx={{ mr: 2 }}>
               {authState.user?.firstName} {authState.user?.lastName}
             </Typography>
+            
+            {/* Notifications Icon */}
+            <IconButton
+              size="large"
+              aria-label="notifications"
+              color="inherit"
+              sx={{ mr: 1 }}
+            >
+              <Badge badgeContent={unreadNotifications} color="error">
+                <Notifications />
+              </Badge>
+            </IconButton>
+            
             <IconButton
               size="large"
               aria-label="account of current user"

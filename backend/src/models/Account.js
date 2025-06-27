@@ -209,6 +209,82 @@ class Account {
       throw error;
     }
   }
+
+  static async getAccountStats(accountId) {
+    const query = `
+      SELECT 
+        (SELECT COUNT(*) FROM contacts WHERE account_id = $1) as total_contacts,
+        (SELECT COUNT(*) FROM contacts WHERE account_id = $1 AND is_primary = true) as primary_contacts,
+        (SELECT COUNT(*) FROM assets WHERE account_id = $1) as total_assets,
+        (SELECT COUNT(*) FROM assets WHERE account_id = $1 AND status = 'active') as active_assets,
+        (SELECT COUNT(*) FROM work_orders WHERE account_id = $1) as total_work_orders,
+        (SELECT COUNT(*) FROM work_orders WHERE account_id = $1 AND status IN ('new', 'assigned', 'in_progress')) as active_work_orders,
+        (SELECT COUNT(*) FROM work_orders WHERE account_id = $1 AND status = 'completed') as completed_work_orders,
+        (SELECT COUNT(*) FROM work_orders WHERE account_id = $1 AND created_date >= CURRENT_DATE - INTERVAL '30 days') as work_orders_this_month,
+        (SELECT COUNT(*) FROM opportunities WHERE account_id = $1) as total_opportunities,
+        (SELECT COUNT(*) FROM opportunities WHERE account_id = $1 AND stage NOT IN ('closed_won', 'closed_lost')) as active_opportunities,
+        (SELECT COALESCE(SUM(estimated_value), 0) FROM opportunities WHERE account_id = $1 AND stage NOT IN ('closed_won', 'closed_lost')) as pipeline_value,
+        (SELECT COALESCE(SUM(estimated_value), 0) FROM opportunities WHERE account_id = $1 AND stage = 'closed_won') as won_value
+    `;
+
+    try {
+      const result = await db.query(query, [accountId]);
+      return result.rows[0];
+    } catch (error) {
+      logger.error('Error fetching account stats:', error);
+      throw error;
+    }
+  }
+
+  static async getRecentActivity(accountId, limit = 10) {
+    const query = `
+      (
+        SELECT 
+          'work_order' as activity_type,
+          work_order_id as activity_id,
+          title as activity_title,
+          status as activity_status,
+          created_date as activity_date,
+          'Work Order' as activity_category
+        FROM work_orders 
+        WHERE account_id = $1
+      )
+      UNION ALL
+      (
+        SELECT 
+          'opportunity' as activity_type,
+          opportunity_id as activity_id,
+          title as activity_title,
+          stage as activity_status,
+          updated_date as activity_date,
+          'Opportunity' as activity_category
+        FROM opportunities 
+        WHERE account_id = $1
+      )
+      UNION ALL
+      (
+        SELECT 
+          'asset' as activity_type,
+          asset_id as activity_id,
+          CONCAT(asset_type, ' - ', COALESCE(brand, ''), ' ', COALESCE(model, '')) as activity_title,
+          status as activity_status,
+          created_date as activity_date,
+          'Asset' as activity_category
+        FROM assets 
+        WHERE account_id = $1
+      )
+      ORDER BY activity_date DESC
+      LIMIT $2
+    `;
+
+    try {
+      const result = await db.query(query, [accountId, limit]);
+      return result.rows;
+    } catch (error) {
+      logger.error('Error fetching account recent activity:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = Account;

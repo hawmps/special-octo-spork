@@ -186,6 +186,16 @@ class ApiService {
     return response.data;
   }
 
+  async getAccountSpecificStats(id: string) {
+    const response = await this.api.get(`/accounts/${id}/stats`);
+    return response.data;
+  }
+
+  async getAccountActivity(id: string, limit = 10) {
+    const response = await this.api.get(`/accounts/${id}/activity`, { params: { limit } });
+    return response.data;
+  }
+
   // Contacts
   async getContacts(params?: any) {
     const response = await this.api.get('/contacts', { params });
@@ -437,6 +447,79 @@ class ApiService {
 
   async getPartsUsageReport(params?: any) {
     const response = await this.api.get('/reports/parts/usage', { params });
+    return response.data;
+  }
+
+  // Scheduling
+  async getAgentAvailability(agentId: string, startDate: string, endDate: string) {
+    const response = await this.api.get(`/scheduling/agents/${agentId}/availability`, {
+      params: { start_date: startDate, end_date: endDate }
+    });
+    return response.data;
+  }
+
+  async getAllAgentsAvailability(startDate: string, endDate: string, territory?: string) {
+    const response = await this.api.get('/scheduling/agents/availability', {
+      params: { start_date: startDate, end_date: endDate, territory }
+    });
+    return response.data;
+  }
+
+  async getUnassignedWorkOrders(params?: any) {
+    const response = await this.api.get('/scheduling/work-orders/unassigned', { params });
+    return response.data;
+  }
+
+  async assignWorkOrder(workOrderId: string, agentId: string, scheduledDate?: string) {
+    const response = await this.api.post(`/scheduling/work-orders/${workOrderId}/assign`, {
+      agent_id: agentId,
+      scheduled_date: scheduledDate
+    });
+    return response.data;
+  }
+
+  async bulkAssignWorkOrders(assignments: Array<{workOrderId: string, agentId: string, scheduledDate?: string}>) {
+    const response = await this.api.post('/scheduling/work-orders/bulk-assign', {
+      assignments
+    });
+    return response.data;
+  }
+
+  async getSchedulingSuggestions(workOrderId: string) {
+    const response = await this.api.get(`/scheduling/work-orders/${workOrderId}/suggestions`);
+    return response.data;
+  }
+
+  async getScheduleOverview(date: string) {
+    const response = await this.api.get('/scheduling/overview', { params: { date } });
+    return response.data;
+  }
+
+  async getScheduleOverviewRange(startDate: string, endDate: string) {
+    const response = await this.api.get('/scheduling/overview/range', {
+      params: { start_date: startDate, end_date: endDate }
+    });
+    return response.data;
+  }
+
+  // Notifications
+  async getAgentNotifications(agentId: string, params?: any) {
+    const response = await this.api.get(`/scheduling/agents/${agentId}/notifications`, { params });
+    return response.data;
+  }
+
+  async markNotificationRead(notificationId: string) {
+    const response = await this.api.patch(`/scheduling/notifications/${notificationId}/read`);
+    return response.data;
+  }
+
+  async sendManualNotification(agentId: string, workOrderId: string, type?: string, changeType?: string) {
+    const response = await this.api.post('/scheduling/notifications/send', {
+      agent_id: agentId,
+      work_order_id: workOrderId,
+      type,
+      change_type: changeType
+    });
     return response.data;
   }
 }

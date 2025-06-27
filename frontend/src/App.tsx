@@ -25,6 +25,7 @@ import OpportunityDetailPage from '@/pages/opportunities/OpportunityDetailPage';
 import PartsPage from '@/pages/parts/PartsPage';
 import PartDetailPage from '@/pages/parts/PartDetailPage';
 import ReportsPage from '@/pages/reports/ReportsPage';
+import SchedulingPage from '@/pages/scheduling/SchedulingPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 
 // Create theme
@@ -219,6 +220,16 @@ const AppRoutes: React.FC = () => {
           element={
             <ProtectedRoute requiredRoles={['platform_admin', 'field_manager']}>
               <ReportsPage />
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Scheduling */}
+        <Route 
+          path="scheduling" 
+          element={
+            <ProtectedRoute requiredRoles={['platform_admin', 'field_manager']}>
+              <SchedulingPage />
             </ProtectedRoute>
           } 
         />

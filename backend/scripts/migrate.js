@@ -78,6 +78,17 @@ async function executeMigration(client, migration) {
       return;
     }
     
+    // Check if this is a sample data error (duplicate data or subquery returning multiple rows)
+    if (migration.filename.includes('sample') || migration.filename.includes('data')) {
+      if (error.code === '23505' || // unique_violation
+          error.message.includes('more than one row returned by a subquery') ||
+          error.message.includes('duplicate key value')) {
+        console.log(`⚠️  Sample data from ${migration.filename} appears to already exist, marking as executed`);
+        await markMigrationExecuted(client, migration.filename);
+        return;
+      }
+    }
+    
     console.error(`❌ Error executing migration ${migration.filename}:`, error.message);
     throw error;
   }

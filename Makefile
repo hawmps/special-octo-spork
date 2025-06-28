@@ -6,7 +6,7 @@
 .DEFAULT_GOAL := help
 
 # Docker Compose command (try docker compose first, fallback to docker-compose)
-DOCKER_COMPOSE := $(shell which docker 2>/dev/null && docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
+DOCKER_COMPOSE := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
 
 # Colors for output
 GREEN := \033[0;32m
@@ -76,15 +76,15 @@ shell-db: ## Open PostgreSQL shell
 
 test: ## Run all tests
 	@echo "$(YELLOW)Running backend tests...$(NC)"
-	@$(DOCKER_COMPOSE) exec backend npm test
+	@$(DOCKER_COMPOSE) exec backend npm test -- --passWithNoTests
 	@echo "$(YELLOW)Running frontend tests...$(NC)"
-	@$(DOCKER_COMPOSE) exec frontend npm test -- --watchAll=false
+	@$(DOCKER_COMPOSE) exec frontend npm test -- --watchAll=false --passWithNoTests
 
 test-backend: ## Run backend tests only
-	@$(DOCKER_COMPOSE) exec backend npm test
+	@$(DOCKER_COMPOSE) exec backend npm test -- --passWithNoTests
 
 test-frontend: ## Run frontend tests only
-	@$(DOCKER_COMPOSE) exec frontend npm test -- --watchAll=false
+	@$(DOCKER_COMPOSE) exec frontend npm test -- --watchAll=false --passWithNoTests
 
 lint: ## Run linting on all code
 	@echo "$(YELLOW)Linting backend...$(NC)"

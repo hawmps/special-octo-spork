@@ -1,5 +1,11 @@
 # Field Service CRM API Documentation
 
+<!-- 
+Version: 1.1.0
+Last Updated: 2025-06-28
+Changes: Added scheduling endpoints section
+-->
+
 ## Overview
 
 The Field Service CRM API is a RESTful service built with Node.js and Express, providing comprehensive endpoints for managing field service operations.
@@ -491,6 +497,39 @@ List sales opportunities.
   ]
 }
 ```
+
+## Scheduling
+<!-- Added: v1.0.0 (2025-06-28) -->
+
+### GET /scheduling/agents/availability
+Get availability for all agents in a date range.
+
+**Query Parameters:**
+- `start_date` (required): ISO 8601 date
+- `end_date` (required): ISO 8601 date  
+- `territory` (optional): Filter by territory
+
+**Response:** See [Scheduling Module Documentation](./SCHEDULING_MODULE.md#get-apischedulingagentsavailability)
+
+### GET /scheduling/agents/:agentId/availability
+Get availability for a specific agent.
+
+### GET /scheduling/work-orders/unassigned
+Get all unassigned work orders.
+
+### POST /scheduling/work-orders/:workOrderId/assign
+Assign a work order to an agent.
+
+### POST /scheduling/work-orders/bulk-assign
+Assign multiple work orders at once.
+
+### GET /scheduling/work-orders/:workOrderId/suggestions
+Get agent suggestions for a work order.
+
+### GET /scheduling/overview
+Get scheduling overview for a specific date.
+
+**Full documentation:** See [Scheduling Module Documentation](./SCHEDULING_MODULE.md)
 
 ## Reports
 

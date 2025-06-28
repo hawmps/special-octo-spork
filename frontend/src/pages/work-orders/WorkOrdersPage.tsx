@@ -62,9 +62,13 @@ const workOrderValidationSchema = Yup.object({
   service_type: Yup.string()
     .max(100, 'Service type must not exceed 100 characters'),
   scheduled_date: Yup.date()
+    .nullable()
     .min(new Date(), 'Scheduled date cannot be in the past'),
   estimated_duration: Yup.number()
+    .nullable()
     .min(1, 'Estimated duration must be at least 1 minute'),
+  status: Yup.string()
+    .oneOf(['new', 'assigned', 'in_progress', 'on_hold', 'completed', 'cancelled'], 'Invalid status'),
 });
 
 const WorkOrdersPage: React.FC = () => {
@@ -96,7 +100,10 @@ const WorkOrdersPage: React.FC = () => {
         page,
         limit: 12,
         ...filters,
-      }).then((res) => res.data),
+      }).then((res) => {
+        console.log('Work orders API response:', res);
+        return res;
+      }),
     {
       keepPreviousData: true,
     }
@@ -128,7 +135,17 @@ const WorkOrdersPage: React.FC = () => {
       setCreating(true);
       setCreateError(null);
       
-      await apiService.createWorkOrder(values);
+      // Transform empty strings to null for optional fields
+      const cleanedValues = {
+        ...values,
+        scheduled_date: values.scheduled_date || null,
+        assigned_agent_id: values.assigned_agent_id || null,
+        description: values.description || null,
+        service_type: values.service_type || null,
+        notes: values.notes || null,
+      };
+      
+      await apiService.createWorkOrder(cleanedValues);
       
       // Close dialog and refresh data
       setAddDialogOpen(false);
@@ -298,7 +315,7 @@ const WorkOrdersPage: React.FC = () => {
       ) : (
         <>
           <Grid container spacing={3}>
-            {workOrdersData?.data.map((workOrder) => (
+            {(workOrdersData?.data || []).map((workOrder) => (
               <Grid item xs={12} sm={6} md={4} key={workOrder.work_order_id}>
                 <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <CardContent sx={{ flexGrow: 1 }}>
@@ -380,7 +397,7 @@ const WorkOrdersPage: React.FC = () => {
           </Grid>
 
           {/* Pagination */}
-          {workOrdersData && workOrdersData.pagination.pages > 1 && (
+          {workOrdersData && workOrdersData.pagination?.pages > 1 && (
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
               <Pagination
                 count={workOrdersData.pagination.pages}
@@ -391,7 +408,7 @@ const WorkOrdersPage: React.FC = () => {
             </Box>
           )}
 
-          {workOrdersData?.data.length === 0 && (
+          {(workOrdersData?.data || []).length === 0 && (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <Typography variant="h6" color="text.secondary">
                 No work orders found
@@ -431,8 +448,9 @@ const WorkOrdersPage: React.FC = () => {
             priority: 'medium' as const,
             service_type: '',
             scheduled_date: '',
-            estimated_duration: '',
+            estimated_duration: 60,
             notes: '',
+            status: 'new' as const,
           }}
           validationSchema={workOrderValidationSchema}
           onSubmit={handleCreateWorkOrder}

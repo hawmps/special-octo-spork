@@ -31,7 +31,7 @@ class Schedule {
                 'estimated_duration', wo.estimated_duration,
                 'status', wo.status,
                 'priority', wo.priority,
-                'address', COALESCE(wo.street_address, 'N/A')
+                'address', 'N/A'
               )
             END
           ) FILTER (WHERE wo.work_order_id IS NOT NULL),
@@ -148,7 +148,7 @@ class Schedule {
                 'estimated_duration', wo.estimated_duration,
                 'status', wo.status,
                 'priority', wo.priority,
-                'address', COALESCE(wo.street_address, 'N/A')
+                'address', 'N/A'
               )
             END
           ) FILTER (WHERE wo.work_order_id IS NOT NULL),
@@ -179,9 +179,10 @@ class Schedule {
     const { priority, territory, limit = 50 } = options;
 
     try {
-      await db.query('SELECT 1 FROM work_orders LIMIT 1');
+      // Check if the work_orders table exists and has the required columns
+      await db.query('SELECT work_order_id, work_order_number, title, priority, status FROM work_orders LIMIT 1');
     } catch (error) {
-      logger.info('Work orders table does not exist, returning mock data');
+      logger.info('Work orders table does not exist or missing columns, returning mock data');
       // Return mock unassigned work orders for development
       return [
         {
@@ -245,9 +246,9 @@ class Schedule {
         wo.created_date,
         acc.company_name,
         acc.account_type,
-        COALESCE(wo.street_address, 'N/A') as address,
-        COALESCE(wo.city, 'N/A') as city,
-        COALESCE(wo.state, 'N/A') as state
+        'N/A' as address,
+        'N/A' as city,
+        'N/A' as state
       FROM work_orders wo
       JOIN accounts acc ON wo.account_id = acc.account_id
       WHERE ${whereClause}

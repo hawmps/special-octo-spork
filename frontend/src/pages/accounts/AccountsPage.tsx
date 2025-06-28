@@ -61,6 +61,9 @@ const accountValidationSchema = Yup.object({
   website: Yup.string()
     .url('Please enter a valid URL')
     .max(255, 'Website URL must not exceed 255 characters'),
+  status: Yup.string()
+    .required('Status is required')
+    .oneOf(['active', 'inactive', 'suspended'], 'Invalid status'),
 });
 
 const AccountsPage: React.FC = () => {
@@ -345,6 +348,7 @@ const AccountsPage: React.FC = () => {
             phone: '',
             email: '',
             website: '',
+            status: 'active' as const,
           }}
           validationSchema={accountValidationSchema}
           onSubmit={handleCreateAccount}
@@ -434,7 +438,7 @@ const AccountsPage: React.FC = () => {
                     </Field>
                   </Grid>
                   
-                  <Grid item xs={12}>
+                  <Grid item xs={12} sm={6}>
                     <Field name="website">
                       {({ field }: any) => (
                         <TextField
@@ -445,6 +449,21 @@ const AccountsPage: React.FC = () => {
                           error={touched.website && Boolean(errors.website)}
                           helperText={touched.website && errors.website}
                         />
+                      )}
+                    </Field>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Field name="status">
+                      {({ field }: any) => (
+                        <FormControl fullWidth>
+                          <InputLabel>Status *</InputLabel>
+                          <Select {...field} label="Status *">
+                            <MenuItem value="active">Active</MenuItem>
+                            <MenuItem value="inactive">Inactive</MenuItem>
+                            <MenuItem value="suspended">Suspended</MenuItem>
+                          </Select>
+                        </FormControl>
                       )}
                     </Field>
                   </Grid>

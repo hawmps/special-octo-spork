@@ -429,7 +429,7 @@ const ServiceAgentsPage: React.FC = () => {
             certification_level: 'junior' as const,
             hire_date: '',
             territory: '',
-            hourly_rate: '',
+            hourly_rate: 0,
             status: 'active' as const,
           }}
           validationSchema={serviceAgentValidationSchema}

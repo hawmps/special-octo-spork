@@ -28,7 +28,7 @@ const validateEmail = (field) => body(field).isEmail().normalizeEmail().withMess
 
 const validatePhone = (field) => body(field).optional().isMobilePhone('any').withMessage(`${field} must be a valid phone number`);
 
-const validateDate = (field) => body(field).optional().isISO8601().toDate().withMessage(`${field} must be a valid date`);
+const validateDate = (field) => body(field).optional({ nullable: true, checkFalsy: true }).isISO8601().toDate().withMessage(`${field} must be a valid date`);
 
 const validateEnum = (field, values) => body(field).isIn(values).withMessage(`${field} must be one of: ${values.join(', ')}`);
 
@@ -44,7 +44,7 @@ const validateAccount = [
 
 // Contact validation
 const validateContact = [
-  validateUUID('account_id'),
+  body('account_id').isUUID().withMessage('account_id must be a valid UUID'),
   body('first_name').trim().isLength({ min: 1, max: 100 }).withMessage('First name is required and must be less than 100 characters'),
   body('last_name').trim().isLength({ min: 1, max: 100 }).withMessage('Last name is required and must be less than 100 characters'),
   validateEmail('email').optional(),
@@ -57,7 +57,7 @@ const validateContact = [
 
 // Work Order validation
 const validateWorkOrder = [
-  validateUUID('account_id'),
+  body('account_id').isUUID().withMessage('account_id must be a valid UUID'),
   body('title').trim().isLength({ min: 1, max: 255 }).withMessage('Title is required and must be less than 255 characters'),
   body('description').optional().trim().isLength({ max: 2000 }).withMessage('Description must be less than 2000 characters'),
   validateEnum('priority', ['low', 'medium', 'high', 'emergency']).optional(),
@@ -93,7 +93,7 @@ const validateAsset = [
 
 // Opportunity validation
 const validateOpportunity = [
-  validateUUID('account_id'),
+  body('account_id').isUUID().withMessage('account_id must be a valid UUID'),
   body('title').trim().isLength({ min: 1, max: 255 }).withMessage('Title is required and must be less than 255 characters'),
   body('estimated_value').optional().isFloat({ min: 0 }).withMessage('Estimated value must be a positive number'),
   body('probability').optional().isInt({ min: 0, max: 100 }).withMessage('Probability must be between 0 and 100'),
@@ -121,7 +121,10 @@ const validatePagination = [
 ];
 
 const validateSearch = [
-  query('search').optional().trim().isLength({ min: 1, max: 100 }).withMessage('Search term must be between 1 and 100 characters'),
+  query('search').optional().trim().customSanitizer(value => {
+    // Convert empty strings to undefined so they're treated as no search
+    return value === '' ? undefined : value;
+  }).isLength({ min: 1, max: 100 }).withMessage('Search term must be between 1 and 100 characters'),
   handleValidationErrors
 ];
 

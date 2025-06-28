@@ -95,7 +95,7 @@ const ServiceAgentDetailPage: React.FC = () => {
       const [agentResponse, statsResponse, availabilityResponse] = await Promise.all([
         apiService.getServiceAgent(id),
         apiService.getAgentStats(id),
-        apiService.getAgentAvailability(id),
+        apiService.getServiceAgentAvailability(id),
       ]);
       
       setAgent(agentResponse.data);
@@ -122,7 +122,10 @@ const ServiceAgentDetailPage: React.FC = () => {
       setSaving(true);
       setSaveError(null);
       
-      const response = await apiService.updateServiceAgent(id, values);
+      // Prepare update data
+      const updateData = values;
+      
+      const response = await apiService.updateServiceAgent(id, updateData);
       setAgent(response.data);
       setEditMode(false);
     } catch (err: any) {
@@ -237,7 +240,7 @@ const ServiceAgentDetailPage: React.FC = () => {
                       specializations: agent.specializations || [],
                       certification_level: agent.certification_level || 'junior',
                       territory: agent.territory || '',
-                      hourly_rate: agent.hourly_rate ? parseFloat(agent.hourly_rate) : '',
+                      hourly_rate: agent.hourly_rate || 0,
                       status: agent.status || 'active',
                     }}
                     validationSchema={serviceAgentEditValidationSchema}
@@ -489,7 +492,7 @@ const ServiceAgentDetailPage: React.FC = () => {
                           </Typography>
                           <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <MoneyIcon fontSize="small" color="action" />
-                            {agent.hourly_rate ? `$${parseFloat(agent.hourly_rate).toFixed(2)}/hr` : 'Not specified'}
+                            {agent.hourly_rate ? `$${agent.hourly_rate.toFixed(2)}/hr` : 'Not specified'}
                           </Typography>
                         </Box>
                       </Grid>

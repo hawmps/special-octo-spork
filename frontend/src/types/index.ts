@@ -361,3 +361,6 @@ export type UpdateOpportunityData = Partial<CreateOpportunityData>;
 
 export type CreatePartData = Omit<Part, 'part_id' | 'created_date' | 'updated_date' | 'needs_reorder' | 'usage_history'>;
 export type UpdatePartData = Partial<CreatePartData>;
+
+export type CreateServiceAgentData = Omit<ServiceAgent, 'agent_id' | 'created_date' | 'updated_date' | 'full_name' | 'email' | 'phone' | 'active_work_orders'>;
+export type UpdateServiceAgentData = Partial<CreateServiceAgentData>;

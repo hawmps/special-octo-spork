@@ -289,7 +289,7 @@ class ApiService {
     return response.data;
   }
 
-  async getAgentAvailability(id: string, date?: string) {
+  async getServiceAgentAvailability(id: string, date?: string) {
     const response = await this.api.get(`/service-agents/${id}/availability`, {
       params: { date },
     });
